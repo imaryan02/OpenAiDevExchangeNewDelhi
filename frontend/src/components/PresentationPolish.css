@@ -1,0 +1,280 @@
+/* Conference layout polish: every information layer owns a distinct lane. */
+.observatory {
+  grid-template-rows: minmax(180px, .88fr) 58px minmax(250px, 1.12fr);
+}
+
+.primary-flow {
+  position: relative;
+}
+
+.identity-node {
+  position: absolute;
+  top: -66px;
+  left: 43%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 168px;
+  min-height: 48px;
+  padding: 8px 11px;
+  border: 1px solid #d1def1;
+  border-radius: 10px;
+  background: #fff;
+  color: #415a83;
+  text-align: left;
+  box-shadow: 0 3px 8px rgba(41, 72, 121, .1);
+}
+
+.identity-node::after {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  height: 20px;
+  border-left: 1px dashed #87a4cf;
+  content: '';
+}
+
+.identity-node svg {
+  flex: none;
+  color: #238b77;
+  font-size: 20px;
+}
+
+.identity-node strong,
+.identity-node small {
+  display: block;
+}
+
+.identity-node strong {
+  font-size: 11px;
+}
+
+.identity-node small {
+  margin-top: 3px;
+  color: #64789a;
+  font-size: 8px;
+}
+
+.identity-node.resolved {
+  border-color: #9bd9ca;
+  background: #f0fbf8;
+}
+
+.response-return {
+  position: absolute;
+  right: 20%;
+  bottom: -30px;
+  left: 35%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 22px;
+  border-top: 1px solid #c7d6ec;
+  color: #657b9e;
+  font-size: 8px;
+}
+
+.response-return svg {
+  color: #3d70be;
+  font-size: 14px;
+}
+
+.chained-lane {
+  position: relative;
+  flex: 1 1 365px;
+  min-width: 330px;
+  max-width: 410px;
+  height: 150px;
+  padding: 38px 12px 12px;
+  border: 1px solid #c8d7ee;
+  border-radius: 12px;
+  background: #f5f8fd;
+  display: grid;
+  grid-template-columns: 1fr 18px 1fr 18px 1fr;
+  align-items: center;
+  gap: 4px;
+}
+
+.chained-lane > .step-number {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #365eaa;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.lane-title {
+  position: absolute;
+  top: 14px;
+  left: 42px;
+  color: #405b86;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .025em;
+}
+
+.chained-lane > button {
+  height: 82px;
+  padding: 9px 5px;
+  border: 1px solid #d6e1f1;
+  border-radius: 9px;
+  background: #fff;
+  color: #1b3765;
+  text-align: center;
+}
+
+.chained-lane > button.active {
+  border-color: #5b82cf;
+  box-shadow: 0 0 0 3px #e0eaff;
+}
+
+.chained-lane > button svg {
+  color: #4d68b5;
+  font-size: 20px;
+}
+
+.chained-lane > button b,
+.chained-lane > button small {
+  display: block;
+}
+
+.chained-lane > button b {
+  margin-top: 5px;
+  font-size: 10px;
+}
+
+.chained-lane > button small {
+  margin-top: 3px;
+  color: #6b7e9d;
+  font-size: 7px;
+}
+
+.chained-lane > svg {
+  color: #7491bd;
+  font-size: 16px;
+}
+
+.path-card > b {
+  position: absolute;
+  right: 8px;
+  bottom: 10px;
+  left: 8px;
+  display: block;
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.call-summary {
+  width: min(1680px, 96%);
+  min-height: 44px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #f1f6ff;
+}
+
+.understanding {
+  min-width: 0;
+  justify-content: flex-end;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tool-workbench {
+  width: min(1320px, 92%);
+  max-height: 300px;
+  padding: 48px 18px 34px;
+}
+
+.engine-drop {
+  top: 12px;
+  right: 20px;
+  left: auto;
+}
+
+.engine-drop i {
+  top: 23px;
+  height: 18px;
+}
+
+.engine-drop span {
+  position: static;
+  width: auto;
+  margin-left: 3px;
+  color: #667da4;
+  font-size: 8px;
+  text-align: left;
+}
+
+.tool-grid {
+  grid-template-columns: 1fr 30px 1.35fr 30px 1fr 30px 1.2fr;
+}
+
+@media (max-height: 820px) {
+  .observatory {
+    grid-template-rows: 154px 48px minmax(218px, 1fr);
+  }
+
+  .identity-node {
+    top: -48px;
+    width: 150px;
+    min-height: 40px;
+    padding: 6px 9px;
+  }
+
+  .identity-node::after {
+    height: 12px;
+  }
+
+  .response-return {
+    bottom: -24px;
+  }
+
+  .chained-lane {
+    height: 124px;
+    min-width: 300px;
+    padding-top: 32px;
+  }
+
+  .chained-lane > button {
+    height: 70px;
+  }
+
+  .path-card > b {
+    bottom: 7px;
+  }
+
+  .call-summary {
+    min-height: 38px;
+    padding-block: 4px;
+  }
+
+  .tool-workbench {
+    max-height: 245px;
+    padding: 42px 14px 28px;
+  }
+}
+
+@media (max-width: 1450px) {
+  .call-summary {
+    width: 96%;
+  }
+
+  .tool-workbench {
+    width: 94%;
+  }
+}

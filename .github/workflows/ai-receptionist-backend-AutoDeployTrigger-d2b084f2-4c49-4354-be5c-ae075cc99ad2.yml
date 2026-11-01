@@ -1,0 +1,128 @@
+name: Trigger auto deployment for ai-receptionist-backend
+
+# Deploy manually until the new repository has its own secrets and Azure OIDC trust.
+on:
+  workflow_dispatch:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r backend/requirements.lock -e backend
+      - run: ruff check backend
+      - run: mypy backend/app
+      - run: pytest backend/tests
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run typecheck
+        working-directory: frontend
+      - run: node --test tests/*.test.mjs
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+  build-and-deploy:
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v4
+
+      - name: Sign in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: imaryan02
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push backend to Docker Hub
+        id: image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: imaryan02/ai-receptionist-backend:${{ github.sha }}
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AIRECEPTIONISTBACKEND_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AIRECEPTIONISTBACKEND_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AIRECEPTIONISTBACKEND_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy public Docker Hub image to Azure
+        env:
+          BACKEND_IMAGE: docker.io/imaryan02/ai-receptionist-backend@${{ steps.image.outputs.digest }}
+        run: |
+          az containerapp update \
+            --name ai-receptionist-backend \
+            --resource-group rg-ai-receptionist \
+            --image "$BACKEND_IMAGE" \
+            --set-env-vars \
+              PERSONAL_AGENT_CALLBACK_PROVIDER=twilio \
+              PERSONAL_AGENT_OUTBOUND_ENABLED=true \
+              PERSONAL_AGENT_SCHEDULER_ENABLED=true \
+              TWILIO_PHONE_NUMBER=+18312286492 \
+            --output none
+      # Phone carriers cannot wait for a scale-from-zero cold start.
+      # Preserve all existing secrets, ingress, and maximum replica settings.
+      - name: Keep the voice backend warm
+        run: |
+          az containerapp update \
+            --name ai-receptionist-backend \
+            --resource-group rg-ai-receptionist \
+            --min-replicas 1 \
+            --output none
+          minimum=$(az containerapp show \
+            --name ai-receptionist-backend \
+            --resource-group rg-ai-receptionist \
+            --query properties.template.scale.minReplicas --output tsv)
+          test "$minimum" -ge 1
+
+      - name: Verify deployed API readiness
+        timeout-minutes: 4
+        run: |
+          az containerapp show \
+            --name ai-receptionist-backend \
+            --resource-group rg-ai-receptionist \
+            --query '{fqdn:properties.configuration.ingress.fqdn,external:properties.configuration.ingress.external,targetPort:properties.configuration.ingress.targetPort,revision:properties.latestRevisionName,readyRevision:properties.latestReadyRevisionName,running:properties.runningStatus}' \
+            --output json
+          fqdn=$(az containerapp show \
+            --name ai-receptionist-backend \
+            --resource-group rg-ai-receptionist \
+            --query properties.configuration.ingress.fqdn --output tsv)
+          if ! curl --fail --show-error --silent \
+            --connect-timeout 10 --max-time 20 \
+            --retry 3 --retry-all-errors --retry-delay 10 \
+            "https://${fqdn}/health/ready"; then
+            az containerapp revision list \
+              --name ai-receptionist-backend \
+              --resource-group rg-ai-receptionist \
+              --query '[].{name:name,active:properties.active,health:properties.healthState,running:properties.runningState,replicas:properties.replicas}' \
+              --output json
+            az containerapp logs show \
+              --name ai-receptionist-backend \
+              --resource-group rg-ai-receptionist \
+              --type system --tail 20 --follow false --format json
+            exit 1
+          fi
+
+

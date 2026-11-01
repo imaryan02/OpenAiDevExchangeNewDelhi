@@ -1,0 +1,15 @@
+.understanding > .understanding-value {
+  align-items: center;
+  background: transparent;
+  border-radius: 0;
+  color: inherit;
+  display: inline-flex;
+  font-weight: inherit;
+  gap: 8px;
+  padding: 0;
+}
+
+.understanding.waiting > b {
+  color: #5f7199;
+  font-weight: 650;
+}

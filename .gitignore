@@ -1,0 +1,45 @@
+# Python
+.venv/
+__pycache__/
+**/*.py[cod]
+*.egg-info/
+.pytest_cache/
+**/.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+coverage.xml
+htmlcov/
+pytest_tmp/
+**/pytest_tmp/
+
+# JavaScript
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+*.tsbuildinfo
+
+# Secrets and local runtime data
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+*.local
+**/*.local
+*.log
+**/*.log
+
+# OS, editor, and temp files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.impeccable/
+.archify/
+tmp/
+
+# Locally extracted video and frame review artifacts
+artifacts/voicelink-video/
+artifacts/voicelink-video-2/

@@ -1,0 +1,1 @@
+select jsonb_build_object('reschedule_function_present',(select exists(select 1 from information_schema.routines where routine_schema='public' and routine_name='reschedule_appointment'))) as phase_2_rescheduling_verification;
