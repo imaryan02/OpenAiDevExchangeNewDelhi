@@ -178,7 +178,7 @@ function Dashboard(props: any) {
       {props.activePage === "calendar" && <AvailabilityPage days={days} options={props.options} appointments={props.appointments} configuration={props.configuration} offset={props.calendarOffset} onOffset={props.onCalendarOffset} onBooking={props.onBookingPage} />}
       {props.activePage === "appointments" && <AppointmentsPage appointments={props.appointments} search={props.appointmentSearch} onSearch={props.onSearch} onSubmit={props.onSearchSubmit} onCancel={props.onCancel} onReschedule={props.onReschedule} loading={props.loading} onRefresh={props.onAgentDataChange} />}
       {props.activePage === "patients" && <PatientsPage organizationId={props.membership.organization_id} />}
-      {props.activePage === "resources" && <ResourcesPage session={props.session} organizationId={props.membership.organization_id} canEdit={props.membership.role === "ORG_ADMIN"} />}
+      {props.activePage === "resources" && <ResourcesPage session={props.session} organizationId={props.membership.organization_id} canEdit={props.membership.role === "ORG_ADMIN"} onReceiving={() => props.onPage("receiving")} />}
       {props.activePage === "receiving" && <ReceivingInbox session={props.session} organizationId={props.membership.organization_id} canDecide={props.membership.role === "ORG_ADMIN"} />}
       {props.activePage === "booking" && <BookingPage {...props} />}
       {props.activePage === "assistant" && <AiAssistantPage organizationId={props.membership.organization_id} onDataChange={props.onAgentDataChange} />}

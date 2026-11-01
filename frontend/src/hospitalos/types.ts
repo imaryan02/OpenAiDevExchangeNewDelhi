@@ -5,14 +5,17 @@ export type Requirement = "GENERAL" | "ICU" | "TRAUMA" | "PEDIATRIC" | "OBSTETRI
 export type Facility = {
   slug: string; name: string; area: string; address: string; cost_category: string;
   synthetic: boolean; connected_receiving_desk: boolean; emergency_open: boolean;
-  ed_bays_ready: number; icu_beds_ready: number; ventilators_ready: number;
+  ed_bays_ready: number; ed_bays_available: number; ed_holds_active: number;
+  icu_beds_ready: number; icu_beds_available: number; icu_holds_active: number;
+  ventilators_ready: number; pending_requests: number;
   ct_available: boolean; trauma_available: boolean; pediatric_available: boolean;
   obstetric_available: boolean; verified_at: string; distance_km: number;
   recommended: boolean; reason_codes: string[];
 };
 
-export type Resource = Omit<Facility, "connected_receiving_desk" | "distance_km" | "recommended" | "reason_codes" | "address"> & {
+export type Resource = Omit<Facility, "connected_receiving_desk" | "distance_km" | "recommended" | "reason_codes" | "address" | "ed_bays_available" | "icu_beds_available"> & {
   id: string; location_id: string; receiving_enabled: boolean; version: number;
+  updated_by: string | null;
 };
 
 export type DemoEvent = { id: number; event_type: string; actor_type: string; detail: Record<string, unknown>; occurred_at: string };
