@@ -12,6 +12,7 @@ from app.api.routes import (
     voice,
     voice_observability,
 )
+from app.hospitalos.request_routes import router as hospitalos_request_router
 from app.hospitalos.routes import router as hospitalos_router
 from app.personal_agent.messaging import router as personal_whatsapp_router
 from app.personal_agent.routes import router as personal_agent_router
@@ -20,6 +21,7 @@ api_router = APIRouter()
 api_router.include_router(personal_agent_router)
 api_router.include_router(personal_whatsapp_router)
 api_router.include_router(hospitalos_router)
+api_router.include_router(hospitalos_request_router)
 api_router.include_router(presentation.router, prefix="/v1", tags=["presentation"])
 api_router.include_router(health.router, tags=["health"])
 api_router.include_router(me.router, prefix="/v1", tags=["identity"])

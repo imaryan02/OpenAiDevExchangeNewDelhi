@@ -63,6 +63,10 @@ class Settings(BaseSettings):
         default=7, ge=1, le=90, alias="VOICE_TRANSCRIPT_RETENTION_DAYS"
     )
     hospitalos_demo_enabled: bool = Field(default=False, alias="HOSPITALOS_DEMO_ENABLED")
+    hospitalos_response_seconds: int = Field(
+        default=30, ge=8, le=300, alias="HOSPITALOS_RESPONSE_SECONDS"
+    )
+    hospitalos_hold_minutes: int = Field(default=15, ge=1, le=120, alias="HOSPITALOS_HOLD_MINUTES")
     presentation_demo_callers: list[str] = Field(
         default_factory=list, alias="PRESENTATION_DEMO_CALLERS"
     )

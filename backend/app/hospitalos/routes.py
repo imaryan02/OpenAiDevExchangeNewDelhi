@@ -134,7 +134,7 @@ async def update_resources(
                      safe_change_summary)
                     values (:org,'USER',:actor,'HOSPITALOS_RESOURCE_UPDATED',
                             'hospitalos_facility',:facility,
-                            jsonb_build_object('version',:new_version))"""),
+                            jsonb_build_object('version',cast(:new_version as integer)))"""),
             {
                 "org": payload.organization_id,
                 "actor": principal.user_id,

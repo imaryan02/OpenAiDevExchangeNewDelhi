@@ -15,6 +15,17 @@ export type Resource = Omit<Facility, "connected_receiving_desk" | "distance_km"
   id: string; location_id: string; receiving_enabled: boolean; version: number;
 };
 
+export type DemoEvent = { id: number; event_type: string; actor_type: string; detail: Record<string, unknown>; occurred_at: string };
+export type DemoRequest = {
+  id: string; case_id: string; organization_id: string; status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "WITHDRAWN" | "HOLD_CONFLICT";
+  version: number; deadline_at: string; created_at: string; decided_at: string | null;
+  arrival_note: string | null;
+  eta_minutes: number | null; origin: Origin; requirement: Requirement; audience: "PATIENT" | "AMBULANCE";
+  facility_name: string; facility_slug: string; hold_state: "ACTIVE" | "RELEASED" | "EXPIRED" | null;
+  hold_expires_at: string | null; events: DemoEvent[]; synthetic_demo: true;
+};
+export type TrackingCredentials = { case_id: string; tracking_token: string };
+
 export const apiBase = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 export const formatVerified = (value: string) => new Intl.DateTimeFormat("en-IN", {
   dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata",

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { apiBase, formatVerified, responseMessage, type Facility, type Origin, type Preference, type Requirement } from "./types";
+import { RequestTracker } from "./RequestTracker";
+import { apiBase, formatVerified, responseMessage, type DemoRequest, type Facility, type Origin, type Preference, type Requirement, type TrackingCredentials } from "./types";
 import "./styles.css";
 
 const reasons: Record<string, string> = {
@@ -12,6 +13,11 @@ const reasons: Record<string, string> = {
   PEDIATRIC_CAPABILITY_NOT_LISTED: "Pediatric capability is not listed",
   OBSTETRIC_CAPABILITY_NOT_LISTED: "Obstetric capability is not listed",
 };
+const trackingStorageKey = "hospitalos.demo.tracking";
+function newTrackingToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
 
 export default function HospitalOsDemo() {
   const [audience, setAudience] = useState<"PATIENT" | "AMBULANCE">("PATIENT");
@@ -22,6 +28,41 @@ export default function HospitalOsDemo() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refresh, setRefresh] = useState(0);
+  const [credentials, setCredentials] = useState<TrackingCredentials | null>(null);
+  const [tracked, setTracked] = useState<DemoRequest | null>(null);
+  const [requestBusy, setRequestBusy] = useState(false);
+  const [requestError, setRequestError] = useState("");
+
+  useEffect(() => {
+    let saved: TrackingCredentials | null = null;
+    try { saved = JSON.parse(sessionStorage.getItem(trackingStorageKey) ?? "null") as TrackingCredentials | null; } catch { /* Optional browser persistence. */ }
+    if (!saved?.case_id || !saved.tracking_token) return;
+    const controller = new AbortController();
+    void fetch(`${apiBase}/v1/hospitalos/tracking`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(saved), signal: controller.signal,
+    }).then(async response => { if (!response.ok) throw new Error(await responseMessage(response)); return await response.json() as DemoRequest; })
+      .then(body => { if (!controller.signal.aborted) { setCredentials(saved); setTracked(body); } })
+      .catch(() => { /* A saved token may belong to a disabled or reset demo. */ });
+    return () => controller.abort();
+  }, []);
+
+  const sendRequest = async () => {
+    setRequestBusy(true); setRequestError("");
+    const next: TrackingCredentials = { case_id: crypto.randomUUID(), tracking_token: newTrackingToken() };
+    try {
+      const response = await fetch(`${apiBase}/v1/hospitalos/requests`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...next, facility_slug: "geeta-medicine", origin, preference, requirement, audience }),
+      });
+      if (!response.ok) throw new Error(await responseMessage(response));
+      const body = await response.json() as DemoRequest;
+      setCredentials(next); setTracked(body);
+      try { sessionStorage.setItem(trackingStorageKey, JSON.stringify(next)); } catch { /* Tracking remains available until refresh. */ }
+    } catch (cause) { setRequestError(cause instanceof Error ? cause.message : "Could not send demo request."); }
+    finally { setRequestBusy(false); }
+  };
+  const clearTracking = () => { setCredentials(null); setTracked(null); try { sessionStorage.removeItem(trackingStorageKey); } catch { /* Optional browser persistence. */ } };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -53,9 +94,11 @@ export default function HospitalOsDemo() {
       <p className="hos-filter-help">{audience === "AMBULANCE" ? "Enter a resource requirement only if supplied by a qualified clinical team. Verify destination through your operational protocol." : "No medical requirement is inferred from symptoms. These filters compare invented facility data and do not assess clinical suitability."}</p>
     </section>
     <section className="hos-results" aria-live="polite"><div className="hos-results-heading"><div><span className="hos-eyebrow">FACILITY COMPARISON</span><h2>{loading ? "Checking demo resources…" : `${matching} of ${facilities.length} match the selected checks`}</h2></div><button type="button" onClick={() => setRefresh(value => value + 1)} disabled={loading}>Refresh resources</button></div>
+      {credentials && tracked && <RequestTracker credentials={credentials} initial={tracked} onClear={clearTracking} />}
+      {requestError && <div className="hos-error" role="alert">{requestError}</div>}
       {error && <div className="hos-error" role="alert">{error} <span>The demo API may not be enabled yet.</span></div>}
       {!loading && !error && facilities.length === 0 && <div className="hos-empty">No demo facilities are configured.</div>}
-      <div className="hos-card-grid">{facilities.map((facility, index) => <article className={`hos-facility ${facility.recommended ? "hos-is-match" : ""}`} key={facility.slug}><div className="hos-card-top"><span className="hos-card-index">0{index + 1}</span><span className={facility.recommended ? "hos-status match" : "hos-status"}>{facility.recommended ? "Demo match" : "Check needed"}</span></div><h3>{facility.name}</h3><p className="hos-area">{facility.area} · ~{facility.distance_km} km demo distance</p><div className="hos-chips"><span>{facility.cost_category.toLowerCase()}</span><span>{facility.connected_receiving_desk ? "Connected Geeta desk" : "Comparison listing"}</span></div><div className="hos-counts"><div><strong>{facility.ed_bays_ready}</strong><span>Receiving spaces</span></div><div><strong>{facility.icu_beds_ready}</strong><span>ICU beds</span></div><div><strong>{facility.ventilators_ready}</strong><span>Ventilators</span></div></div><div className="hos-reasons">{facility.reason_codes.map(code => <p key={code}>{reasons[code] ?? code}</p>)}</div><div className="hos-card-foot"><span>Demo update: {formatVerified(facility.verified_at)}</span><span>{facility.connected_receiving_desk ? "Receiving requests open in Phase 2" : "No connected receiving desk"}</span></div></article>)}</div>
+      <div className="hos-card-grid">{facilities.map((facility, index) => <article className={`hos-facility ${facility.recommended ? "hos-is-match" : ""}`} key={facility.slug}><div className="hos-card-top"><span className="hos-card-index">0{index + 1}</span><span className={facility.recommended ? "hos-status match" : "hos-status"}>{facility.recommended ? "Demo match" : "Check needed"}</span></div><h3>{facility.name}</h3><p className="hos-area">{facility.area} · ~{facility.distance_km} km demo distance</p><div className="hos-chips"><span>{facility.cost_category.toLowerCase()}</span><span>{facility.connected_receiving_desk ? "Connected Geeta desk" : "Comparison listing"}</span></div><div className="hos-counts"><div><strong>{facility.ed_bays_ready}</strong><span>Receiving spaces</span></div><div><strong>{facility.icu_beds_ready}</strong><span>ICU beds</span></div><div><strong>{facility.ventilators_ready}</strong><span>Ventilators</span></div></div><div className="hos-reasons">{facility.reason_codes.map(code => <p key={code}>{reasons[code] ?? code}</p>)}</div><div className="hos-card-foot"><span>Demo update: {formatVerified(facility.verified_at)}</span><span>{facility.connected_receiving_desk ? "Connected demo receiving desk" : "No connected receiving desk"}</span></div>{facility.connected_receiving_desk && facility.recommended && !tracked && <button type="button" className="hos-request-button" onClick={() => void sendRequest()} disabled={requestBusy}>{requestBusy ? "Sending…" : "Request Geeta demo confirmation"}</button>}</article>)}</div>
     </section>
   </main>;
 }
