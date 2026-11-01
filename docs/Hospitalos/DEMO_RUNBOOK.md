@@ -1,13 +1,12 @@
 # HospitalOS synthetic demo runbook
 
-The Azure and Vercel activation steps are deferred. The Phase 2 migration is prepared in source and was tested on an isolated PostgreSQL fixture; it has **not** been applied to the existing Supabase database.
+The Azure and Vercel activation steps are deferred. The owner applied the Phase 2 migration and verified that all four new Supabase tables have RLS enabled. The request flow was tested on an isolated PostgreSQL fixture; the deployed two-browser flow has not been rehearsed.
 
 ## Before activating the demo
 
-1. Review and apply only `supabase/migrations/20261101000200_hospitalos_requests.sql` in the intended Supabase SQL Editor. Do not run the historical migrations as a batch.
-2. Run `supabase/verification/20261101000200_hospitalos_requests_checks.sql`. Confirm all four tables have RLS enabled. Do not share tracking-token hashes.
-3. When deployment resumes, use the manual Azure workflow for the new backend. Set the Vercel `VITE_HOSPITALOS_DEMO_ENABLED=true` build variable after the API is ready, then redeploy the frontend.
-4. Sign in as a Geeta organization administrator. Open Resources and save the synthetic snapshot shortly before rehearsal; stale snapshots are not recommended after 24 hours. Confirm at least one ready receiving space.
+1. The owner has already run `supabase/migrations/20261101000200_hospitalos_requests.sql` and verified RLS on the four new tables. Do not run the historical migrations as a batch or share tracking-token hashes.
+2. When deployment resumes, push the local Phase 2 code, check CI, then use the manual Azure workflow for the new backend. Set the Vercel `VITE_HOSPITALOS_DEMO_ENABLED=true` build variable after the API is ready, then redeploy the frontend.
+3. Sign in as a Geeta organization administrator. Open Resources and save the synthetic snapshot shortly before rehearsal; stale snapshots are not recommended after 24 hours. Confirm at least one ready receiving space.
 
 ## Two-browser rehearsal
 

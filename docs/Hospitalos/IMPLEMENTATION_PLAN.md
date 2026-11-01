@@ -1,6 +1,6 @@
 # HospitalOS demo implementation plan
 
-Status: Phase 1 and the core Phase 2 request workflow are implemented locally. Phase 1's three demo rows are verified in the existing database. The Phase 2 migration has only been tested in an isolated PostgreSQL database; deployment is deferred by the owner.
+Status: Phase 1 and the core Phase 2 request workflow are implemented locally. The Phase 1 demo rows and Phase 2 RLS tables are verified in the intended Supabase database. Deployment is deferred by the owner.
 
 ## Progress tracker
 
@@ -14,12 +14,12 @@ Update this checklist as each step is verified. A checked implementation item me
 | Public locator and explainable ranking | Implemented with fixed Delhi origins, straight-line demo distance, resource checks, and preference sorting | Road ETA, richer evidence/source labels, and a separate clinical-requirement path for qualified users |
 | Geeta resource manager | Admin update API and clinic screen implemented; isolated DB edit-to-locator test passed | Fine-grained ready/held/occupied/blocked states, staffing/equipment evidence, branch-specific roles, and deployed verification |
 | Patient and ambulance entry | One shared screen with an audience switch; patient mode keeps the requirement unknown/general | Verified EMS/clinician identity and distinct workflow rules remain future work |
-| Request to Geeta and admin decision | Local API, public tracking, Geeta inbox, accept/decline, optional admin arrival note, timeout, withdrawal and ETA update implemented | Apply Phase 2 migration to intended database; live two-browser rehearsal and verified contact/navigation details remain |
+| Request to Geeta and admin decision | Local API, public tracking, Geeta inbox, accept/decline, optional admin arrival note, timeout, withdrawal and ETA update implemented; Phase 2 tables created with RLS | Live two-browser rehearsal and verified contact/navigation details remain |
 | Resource hold and conflict | Transactional pooled ED/ICU hold; simultaneous two-case local test yields one acceptance and one conflict | No per-bed identity or lifecycle beyond active/released/expired demo hold |
 | Supervisor and specialist activity | Optional AI supervisor chooses a bounded task; admin triggers deterministic checks; actual results are persisted as events | Live model invocation and wider autonomous task orchestration are untested/not in this demo |
-| Release verification | Isolated PostgreSQL flow, RLS, reset, concurrency, frontend build/tests and targeted backend checks pass | Phase 2 migration on intended database, live two-screen rehearsal, and deployment checks |
+| Release verification | Isolated PostgreSQL flow, RLS, reset, concurrency, frontend build/tests and targeted backend checks pass; owner verified four Phase 2 RLS tables | Live two-screen rehearsal and deployment checks |
 
-**Assessment:** The core synthetic demo can now run against an isolated database. It is not live: the intended database still needs the Phase 2 migration, and the Azure/Vercel versions have not been activated. Road ETA, real contact details, detailed staffing/equipment states, and a full network command center remain outside this thin demo.
+**Assessment:** The core synthetic demo passed against an isolated database, and the owner applied the Phase 2 schema to Supabase. It is not live: the Azure/Vercel versions have not been activated. Road ETA, real contact details, detailed staffing/equipment states, and a full network command center remain outside this thin demo.
 
 ### Phase 1 — Resource manager and locator
 
@@ -51,7 +51,7 @@ Update this checklist as each step is verified. A checked implementation item me
 - [x] Add a transactional pooled demo resource hold; the simultaneous two-case local test produced one accepted request and one conflict.
 - [x] Add a bounded AI supervisor suggestion, human-triggered specialist checks, and real outcome events in the task panel.
 - [x] Test duplicate, timeout, stale, cross-tenant, resource edit, and hold-conflict paths on isolated PostgreSQL; pass frontend build and tests.
-- [ ] Apply the Phase 2 migration to the intended database and run its verification queries. Do not run a broad migration push.
+- [x] Apply the Phase 2 migration to the intended database; owner verification shows RLS enabled on cases, requests, holds, and events. Do not run a broad migration push.
 - [ ] Rehearse the request-to-decision flow in two browsers and verify the real model suggestion path if enabled.
 - [ ] Deploy and verify the complete request-to-decision flow.
 
@@ -91,7 +91,7 @@ Build a thin end-to-end read path before adding consequential requests.
 
 **Phase 2 acceptance:** A request sent from the portal appears in Geeta's inbox; an authorized admin decides it; the requester sees the persisted result; stale, duplicate, expired, or cross-tenant actions fail safely.
 
-**Phase 2 database gate (deferred):** Apply only `supabase/migrations/20261101000200_hospitalos_requests.sql` to the intended database after review. Run `supabase/verification/20261101000200_hospitalos_requests_checks.sql`. The optional owner-run reset is `supabase/seeds/20261101000200_hospitalos_demo_reset.sql`; it clears only synthetic cases, requests, holds, and events. The migration, checks, and reset were exercised on an isolated PostgreSQL 18 fixture, not on the existing Supabase database.
+**Phase 2 database gate (passed):** The owner applied `supabase/migrations/20261101000200_hospitalos_requests.sql` and supplied verification showing RLS enabled on all four new tables. The optional owner-run reset is `supabase/seeds/20261101000200_hospitalos_demo_reset.sql`; it clears only synthetic cases, requests, holds, and events. The migration, checks, and reset were also exercised on an isolated PostgreSQL 18 fixture.
 
 **Release order after the owner resumes deployment:** Apply and verify the Phase 2 migration; deploy the backend image with the HospitalOS demo flag; enable the Vercel demo flag and redeploy; then rehearse the patient/Geeta two-browser flow. Keep the old Azure deployment in place until the owner triggers its manual workflow.
 
