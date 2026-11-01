@@ -7,11 +7,14 @@ import { isPersonalAgentPath } from "./personal-agent/state";
 import "./styles.css";
 
 const PersonalAgentDemo = lazy(() => import("./personal-agent/PersonalAgentDemo"));
+const HospitalOsDemo = lazy(() => import("./hospitalos/HospitalOsDemo"));
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <FluentProvider theme={webLightTheme}>
-      {isPersonalAgentPath(window.location.pathname)
+      {window.location.pathname.replace(/\/$/, "") === "/demo/hospitalos"
+        ? <Suspense fallback={<div className="app-loading">Loading facility locator…</div>}><HospitalOsDemo /></Suspense>
+        : isPersonalAgentPath(window.location.pathname)
         ? <Suspense fallback={<div className="app-loading">Loading personal workspace…</div>}><PersonalAgentDemo /></Suspense>
         : <App />}
     </FluentProvider>

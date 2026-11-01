@@ -1,4 +1,4 @@
-const pages = ["overview", "calendar", "appointments", "patients", "booking", "assistant", "presentation", "calls", "departments", "doctors", "settings"] as const;
+const pages = ["overview", "calendar", "appointments", "patients", "booking", "assistant", "presentation", "calls", "resources", "departments", "doctors", "settings"] as const;
 export type WorkspacePage = typeof pages[number];
 export type WorkspaceRoute = { page: WorkspacePage; callId: string | null };
 type Snapshot = WorkspaceRoute & { canGoBack: boolean; canGoForward: boolean };

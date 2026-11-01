@@ -13,6 +13,7 @@ import { PresentationPage } from "./components/PresentationPage";
 import { OverviewPage } from "./components/OverviewPage";
 import { ReceptionistToggle } from "./personal-agent/ReceptionistToggle";
 import { VoiceCallHistoryPage } from "./components/VoiceCallHistoryPage";
+import { ResourcesPage } from "./hospitalos/ResourcesPage";
 
 import { createWorkspaceNavigation, type WorkspacePage as Page } from "./lib/workspaceNavigation";
 type Membership = { organization_id: string; role: "ORG_ADMIN" | "RECEPTIONIST" | "VIEWER" };
@@ -159,20 +160,23 @@ function Dashboard(props: any) {
     { id: "patients", label: "Patients", icon: PeopleRegular },
     { id: "booking", label: "New booking", icon: AddRegular },
     { id: "assistant", label: "AI assistant", icon: ChatRegular },
+    { id: "resources", label: "Resources", icon: BuildingRegular },
     { id: "presentation", label: "Inside the call", icon: ChatRegular },
     { id: "calls", label: "Voice call history", icon: ChatRegular },
     { id: "departments", label: "Departments", icon: BuildingRegular },
     { id: "doctors", label: "Doctors", icon: PeopleTeamRegular },
     { id: "settings", label: "Clinic settings", icon: SettingsRegular },
   ] as const;
+  const hospitalOsEnabled = import.meta.env.VITE_HOSPITALOS_DEMO_ENABLED === "true";
   return <div className="dashboard-shell">
-    <aside className="sidebar"><div className="sidebar-brand"><span className="brand-mark">GM</span><span>{props.configuration?.organization.name ?? "Geeta Medicine"}</span></div><ReceptionistToggle session={props.session} /><nav>{nav.filter(item => item.id !== "calls" || props.membership.role !== "VIEWER").map((item) => { const Icon = item.icon; return <button key={item.id} className={props.activePage === item.id ? "nav-item active" : "nav-item"} onClick={() => props.onPage(item.id)}><Icon /><span>{item.label}</span></button>; })}<a className="nav-item" href="/demo/personal-agent" aria-label="Friday / Personal AI" title="Open Friday Personal AI"><ChatRegular /><span>Friday / Personal AI</span></a></nav><div className="sidebar-footer"><button className="nav-item"><PeopleRegular /><span>Support</span></button></div></aside>
+    <aside className="sidebar"><div className="sidebar-brand"><span className="brand-mark">GM</span><span>{props.configuration?.organization.name ?? "Geeta Medicine"}</span></div><ReceptionistToggle session={props.session} /><nav>{nav.filter(item => (item.id !== "calls" || props.membership.role !== "VIEWER") && (item.id !== "resources" || hospitalOsEnabled)).map((item) => { const Icon = item.icon; return <button key={item.id} className={props.activePage === item.id ? "nav-item active" : "nav-item"} onClick={() => props.onPage(item.id)}><Icon /><span>{item.label}</span></button>; })}<a className="nav-item" href="/demo/personal-agent" aria-label="Friday / Personal AI" title="Open Friday Personal AI"><ChatRegular /><span>Friday / Personal AI</span></a></nav><div className="sidebar-footer"><button className="nav-item"><PeopleRegular /><span>Support</span></button></div></aside>
     <main className="dashboard-main"><header className="topbar"><div><Text className="section-kicker">{props.configuration ? `${props.configuration.organization.name.toUpperCase()} · ${props.configuration.locations[0]?.name.toUpperCase() ?? ""}` : "RECEPTION WORKSPACE"}</Text><Title1>{pageTitle(props.activePage)}</Title1></div><div className="topbar-actions"><div className="workspace-history" role="group" aria-label="Page navigation"><Button appearance="subtle" icon={<ArrowLeftRegular />} disabled={!props.route.canGoBack} onClick={props.navigation.back} aria-label="Go back" title="Go back" /><Button appearance="subtle" icon={<ArrowRightRegular />} disabled={!props.route.canGoForward} onClick={props.navigation.forward} aria-label="Go forward" title="Go forward" /></div><Button appearance="primary" icon={<AddRegular />} onClick={props.onBookingPage}>New appointment</Button><Avatar name={props.session.user.email ?? "Staff"} size={36} /><Button appearance="subtle" icon={<SignOutRegular />} onClick={props.onSignOut}>Sign out</Button></div></header>
       {props.error && <div className="alert-banner error">{props.error}</div>}{props.message && <div className="alert-banner success">{props.message}</div>}
       {props.activePage === "overview" && <OverviewPage appointments={props.appointments} options={props.options} clinicName={props.configuration?.organization.name ?? "Geeta Medicine"} locationName={props.configuration?.locations[0]?.name ?? ""} onPage={props.onPage} />}
       {props.activePage === "calendar" && <AvailabilityPage days={days} options={props.options} appointments={props.appointments} configuration={props.configuration} offset={props.calendarOffset} onOffset={props.onCalendarOffset} onBooking={props.onBookingPage} />}
       {props.activePage === "appointments" && <AppointmentsPage appointments={props.appointments} search={props.appointmentSearch} onSearch={props.onSearch} onSubmit={props.onSearchSubmit} onCancel={props.onCancel} onReschedule={props.onReschedule} loading={props.loading} onRefresh={props.onAgentDataChange} />}
       {props.activePage === "patients" && <PatientsPage organizationId={props.membership.organization_id} />}
+      {props.activePage === "resources" && <ResourcesPage session={props.session} organizationId={props.membership.organization_id} canEdit={props.membership.role === "ORG_ADMIN"} />}
       {props.activePage === "booking" && <BookingPage {...props} />}
       {props.activePage === "assistant" && <AiAssistantPage organizationId={props.membership.organization_id} onDataChange={props.onAgentDataChange} />}
       {props.activePage === "presentation" && <PresentationPage onExit={() => props.onPage("overview")} organizationId={props.membership.organization_id} accessToken={props.session.access_token} apiBaseUrl={apiBaseUrl} clinicName={props.configuration?.organization.name ?? "Geeta Medicine"} allowLive />}
@@ -217,4 +221,4 @@ function LegacySettingsPage({ configuration }: { configuration: Configuration | 
   </div>;
 }
 function Setting({ label, value }: { label: string; value: string }) { return <div className="setting"><span>{label}</span><strong>{value}</strong></div>; }
-function pageTitle(page: Page) { return ({ overview: "Overview", calendar: "Availability", appointments: "Appointments", patients: "Patients", booking: "New appointment", assistant: "AI assistant", presentation: "Inside the call", calls: "Voice call history", departments: "Departments", doctors: "Doctors", settings: "Clinic settings" } as Record<Page, string>)[page]; }
+function pageTitle(page: Page) { return ({ overview: "Overview", calendar: "Availability", appointments: "Appointments", patients: "Patients", booking: "New appointment", assistant: "AI assistant", presentation: "Inside the call", calls: "Voice call history", resources: "Resources", departments: "Departments", doctors: "Doctors", settings: "Clinic settings" } as Record<Page, string>)[page]; }

@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     voice_transcript_retention_days: int = Field(
         default=7, ge=1, le=90, alias="VOICE_TRANSCRIPT_RETENTION_DAYS"
     )
+    hospitalos_demo_enabled: bool = Field(default=False, alias="HOSPITALOS_DEMO_ENABLED")
     presentation_demo_callers: list[str] = Field(
         default_factory=list, alias="PRESENTATION_DEMO_CALLERS"
     )
