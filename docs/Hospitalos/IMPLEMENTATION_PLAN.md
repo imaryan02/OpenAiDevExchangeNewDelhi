@@ -11,15 +11,17 @@ Update this checklist as each step is verified. A checked implementation item me
 | Demo capability | Current state | Gap before the blueprint's five-minute demo |
 | --- | --- | --- |
 | Three synthetic facilities | Database rows verified; only Geeta is connected | None for the three-listing demo |
-| Public locator and explainable ranking | Implemented with fixed Delhi origins, straight-line demo distance, resource checks, and preference sorting | Road ETA, richer evidence/source labels, and a separate clinical-requirement path for qualified users |
-| Geeta resource manager | Admin update API and clinic screen implemented; isolated DB edit-to-locator test passed | Fine-grained ready/held/occupied/blocked states, staffing/equipment evidence, branch-specific roles, and deployed verification |
+| Public locator and explainable ranking | Implemented with fixed Delhi origins, straight-line demo distance, resource checks, preference sorting, listed capabilities, and active-hold-adjusted ED/ICU availability | Road ETA, independently verified evidence, and a separate clinical-requirement path for qualified users |
+| Geeta resource manager | Admin update API and clinic board show ready, held, available, pending, capability, source, and freshness details; isolated DB edit-to-locator and hold-aware tests passed | Occupied/blocked states, staffing/equipment evidence, branch-specific roles, and deployed verification |
 | Patient and ambulance entry | One shared screen with an audience switch; patient mode keeps the requirement unknown/general | Verified EMS/clinician identity and distinct workflow rules remain future work |
 | Request to Geeta and admin decision | Local API, public tracking, Geeta inbox, accept/decline, optional admin arrival note, timeout, withdrawal and ETA update implemented; Phase 2 tables created with RLS | Live two-browser rehearsal and verified contact/navigation details remain |
-| Resource hold and conflict | Transactional pooled ED/ICU hold; simultaneous two-case local test yields one acceptance and one conflict | No per-bed identity or lifecycle beyond active/released/expired demo hold |
+| Resource hold and conflict | Transactional pooled ED/ICU hold; locator subtracts active holds and a new request is rejected when all ready spaces are held; simultaneous two-case local test yields one acceptance and one conflict | No per-bed identity or lifecycle beyond active/released/expired demo hold |
 | Supervisor and specialist activity | Optional AI supervisor chooses a bounded task; admin triggers deterministic checks; actual results are persisted as events | Live model invocation and wider autonomous task orchestration are untested/not in this demo |
 | Release verification | Isolated PostgreSQL flow, RLS, reset, concurrency, frontend build/tests and targeted backend checks pass; owner verified four Phase 2 RLS tables | Live two-screen rehearsal and deployment checks |
 
 **Assessment:** The core synthetic demo passed against an isolated database, and the owner applied the Phase 2 schema to Supabase. It is not live: the Azure/Vercel versions have not been activated. Road ETA, real contact details, detailed staffing/equipment states, and a full network command center remain outside this thin demo.
+
+**Resource presentation update:** The clinic now shows a connected Geeta resource board and a read-only three-facility comparison. The locator displays ready, active hold, and available ED/ICU counts, plus all four listed capability flags. The receiving inbox has a guided empty state. These values come from the existing Phase 1 and 2 tables; no new migration is required. Frontend build/typecheck, matching unit tests, backend lint/typecheck, and the isolated PostgreSQL request workflow passed locally. A visual two-browser rehearsal and deployed verification remain open.
 
 ### Phase 1 — Resource manager and locator
 
