@@ -1,10 +1,25 @@
 # HospitalOS demo implementation plan
 
-Status: Phase 1 schema and synthetic seed verified by the owner; deployment and live end-to-end verification pending. Phase 2 has not started.
+Status: Phase 1 thin locator/resource implementation is in source and the three demo rows are verified. Phase 2 development has not started. Deployment is deferred by the owner.
 
 ## Progress tracker
 
 Update this checklist as each step is verified. A checked implementation item means the code exists locally; it does not mean the feature is deployed.
+
+### Development audit — 1 November 2026
+
+| Demo capability | Current state | Gap before the blueprint's five-minute demo |
+| --- | --- | --- |
+| Three synthetic facilities | Database rows verified; only Geeta is connected | None for the three-listing demo |
+| Public locator and explainable ranking | Implemented with fixed Delhi origins, straight-line demo distance, resource checks, and preference sorting | Road ETA, richer evidence/source labels, and a separate clinical-requirement path for qualified users |
+| Geeta resource manager | Admin update API and clinic screen implemented | Fine-grained ready/held/occupied/blocked states, staffing and equipment evidence, branch-specific roles, and a live end-to-end edit check |
+| Patient and ambulance entry | One shared screen with an audience switch; patient mode keeps the requirement unknown/general | Verified EMS/clinician identity and distinct workflow rules remain future work |
+| Request to Geeta and admin decision | Not built | Durable request, inbox, authenticated accept/decline, timeout, tracking, and fallback |
+| Resource hold and conflict | Not built | Atomic hold/revalidation and two-case conflict demonstration |
+| Supervisor and specialist activity | Not built | Scoped tools and real persisted task/events; the existing voice agent is separate |
+| Release verification | Build/lint and matching tests pass; database rows verified | Full API/access tests, live two-screen rehearsal, reset procedure, and deployment checks |
+
+**Assessment:** The locator/resource foundation is substantially built. The request-to-decision demonstration and its hold/agent evidence are still development work; a successful Vercel build does not complete them. Finish those before activating the demo on Azure.
 
 ### Phase 1 — Resource manager and locator
 
@@ -14,7 +29,9 @@ Update this checklist as each step is verified. A checked implementation item me
 - [x] Build authenticated resource viewing and admin-only updates with version checks and audit events.
 - [x] Build the public patient/ambulance locator at `/demo/hospitalos`.
 - [x] Add Resources to the existing clinic workspace.
-- [x] Pass frontend typecheck/build, backend lint/typecheck, and four matching tests.
+- [x] Pass frontend typecheck/build and 28 frontend tests, backend lint and HospitalOS typecheck, and four matching tests. Full local backend typecheck is blocked by missing OpenTelemetry packages; two async access tests are skipped in the Windows sandbox.
+- [x] Keep patient specialty selection hidden and reset to unknown/general when switching from ambulance mode; EMS demo copy requires a clinical source.
+- [ ] Run the access tests and resource update integration check in a usable backend test environment.
 - [x] Confirm the intended Supabase database and review its migration ledger (no Supabase migration ledger table was present in the earlier schema inspection).
 - [x] Apply the Phase 1 migration and synthetic seed; verify the three facility rows. Owner-provided result shows only Geeta connected.
 - [ ] Enable `HOSPITALOS_DEMO_ENABLED` on the backend connected to that database.
@@ -30,8 +47,10 @@ Update this checklist as each step is verified. A checked implementation item me
 - [ ] Add durable requests, events, tracking tokens, expiry, and idempotency.
 - [ ] Add public request submission and tracking for Geeta Medicine only.
 - [ ] Add Geeta admin inbox with accept/decline and resource recheck.
-- [ ] Add task activity and fallback display backed by persisted events.
-- [ ] Test duplicate, timeout, stale, and cross-tenant cases; rehearse the two-browser demo.
+- [ ] Add explicit fallback, cancellation, and updated ETA handling backed by persisted events.
+- [ ] Add an atomic demo resource hold and two-case conflict test, keeping acceptance separate from a hold.
+- [ ] Add scoped supervisor/specialist task actions and show their real tool outcomes in a task panel.
+- [ ] Test duplicate, timeout, stale, cross-tenant, and hold-conflict cases; rehearse the two-browser demo.
 - [ ] Deploy and verify the complete request-to-decision flow.
 
 **Phase 2 is complete when** all Phase 2 boxes are checked and its acceptance criteria below pass.
@@ -65,7 +84,7 @@ Build a thin end-to-end read path before adding consequential requests.
 1. Add durable hospitalos_requests and append-only event records. A public requester receives a private tracking token, and only the addressed Geeta staff can see the inbox.
 2. Implement one active request per demo case, idempotent creation, a configurable deadline, explicit accept/decline, version checks, and safe expiry. Acceptance rechecks Geeta resource state in the transaction. Expiry never auto-accepts.
 3. Add request tracking to the public portal and a Receiving requests page to the Geeta workspace. Poll the persisted state; show contact details only after an authorized decision. Other synthetic facilities remain comparison listings.
-4. Add an auditable conflict/fallback scenario and a small task-activity panel driven by actual backend events. Keep agent suggestions informational and outside the acceptance transaction.
+4. Add an auditable hold-conflict/fallback scenario and a task panel driven by persisted backend events. Implement narrow supervisor/resource/coordination task tools for the demo; keep agent suggestions informational and outside the acceptance transaction.
 5. Run the two-browser demo, timeout/duplicate/unauthorized tests, reset procedure, and deployment checks.
 
 **Phase 2 acceptance:** A request sent from the portal appears in Geeta's inbox; an authorized admin decides it; the requester sees the persisted result; stale, duplicate, expired, or cross-tenant actions fail safely.
