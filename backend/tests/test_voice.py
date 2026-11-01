@@ -1,3 +1,4 @@
+import asyncio
 from datetime import timedelta
 from uuid import UUID
 
@@ -8,8 +9,11 @@ from pydantic import AnyHttpUrl
 
 from app.api.routes import voice as voice_route
 from app.core.config import Settings, get_settings
+from app.core.errors import ApiError
 from app.integrations.openai_audio import OpenAIAudioClient
 from app.main import create_app
+from app.personal_agent.config import PersonalSettings
+from app.security.auth import Principal
 from app.voice.codec import (
     AlawTurnDetector,
     MulawTurnDetector,
@@ -220,6 +224,43 @@ def test_signed_inbound_voice_webhook_returns_bound_stream(
     assert "You are speaking with the A I receptionist" in response.text
     assert 'url="wss://voice.example/v1/twilio/media"' in response.text
     assert 'name="binding"' in response.text
+
+
+def test_owner_button_dials_only_registered_phone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = _voice_settings()
+    settings = settings.model_copy(update={"database_url": "postgresql+asyncpg://unused"})
+    owner = UUID("44444444-4444-4444-4444-444444444444")
+    personal = PersonalSettings.model_construct(
+        enabled=True, owner_id=owner, registered_phone="+919800000002"
+    )
+    monkeypatch.setattr(voice_route, "get_settings", lambda: settings)
+    monkeypatch.setattr(voice_route, "get_personal_settings", lambda: personal)
+    voice_route._last_test_call_at.clear()
+    sent: dict[str, str] = {}
+
+    class FakeClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def post(self, _url, *, data):
+            sent.update(data)
+            return httpx.Response(201, json={"sid": "CA-test-call"})
+
+    monkeypatch.setattr(voice_route.httpx, "AsyncClient", lambda **_kwargs: FakeClient())
+    result = asyncio.run(voice_route.start_receptionist_test_call(Principal(owner, None)))
+    assert result == {"status": "queued", "call_sid": "CA-test-call"}
+    assert sent["To"] == "+918529586946"
+    assert sent["Url"] == "https://voice.example/v1/twilio/voice"
+    with pytest.raises(ApiError) as denied:
+        asyncio.run(voice_route.start_receptionist_test_call(
+            Principal(UUID("55555555-5555-5555-5555-555555555555"), None)
+        ))
+    assert denied.value.status_code == 403
 
 
 def test_signed_outbound_voice_webhook_uses_destination_as_caller(

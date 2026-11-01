@@ -82,6 +82,8 @@ jobs:
               PERSONAL_AGENT_SCHEDULER_ENABLED=true \
               HOSPITALOS_DEMO_ENABLED=true \
               TWILIO_PHONE_NUMBER=+18312286492 \
+              PUBLIC_BACKEND_URL=https://ai-receptionist-backend.kindocean-a1f0cf18.centralindia.azurecontainerapps.io \
+              PUBLIC_WEBSOCKET_URL=wss://ai-receptionist-backend.kindocean-a1f0cf18.centralindia.azurecontainerapps.io/v1/twilio/media \
             --output none
       # Phone carriers cannot wait for a scale-from-zero cold start.
       # Preserve all existing secrets, ingress, and maximum replica settings.

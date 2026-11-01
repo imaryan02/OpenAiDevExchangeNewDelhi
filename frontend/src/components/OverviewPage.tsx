@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Badge, Button } from '@fluentui/react-components';
+import { authenticatedFetch, type AuthSession } from '../lib/supabaseAuth';
 import {
   AddRegular,
   ArrowRightRegular,
@@ -41,6 +43,7 @@ type BookingOption = {
 type OverviewTarget = 'calendar' | 'appointments' | 'booking';
 
 type OverviewPageProps = {
+  session: AuthSession;
   appointments: AppointmentRecord[];
   options: BookingOption[];
   clinicName: string;
@@ -68,7 +71,25 @@ function relativeArrival(value: string, now: number) {
   return formatTime(value);
 }
 
-export function OverviewPage({ appointments, options, clinicName, locationName, onPage }: OverviewPageProps) {
+export function OverviewPage({ session, appointments, options, clinicName, locationName, onPage }: OverviewPageProps) {
+  const [calling, setCalling] = useState(false);
+  const [callStatus, setCallStatus] = useState('');
+  async function callReceptionist() {
+    if (calling) return;
+    setCalling(true);
+    setCallStatus('');
+    try {
+      const base = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '');
+      const response = await authenticatedFetch(`${base}/v1/twilio/test-call`, session, { method: 'POST' });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(typeof result?.message === 'string' ? result.message : 'Could not start the call.');
+      setCallStatus('Twilio accepted the call. Your registered phone should ring shortly.');
+    } catch (error) {
+      setCallStatus(error instanceof Error ? error.message : 'Could not start the call.');
+    } finally {
+      setCalling(false);
+    }
+  }
   const now = Date.now();
   const todayKey = dateKey(new Date(now));
   const confirmed = appointments
@@ -112,7 +133,9 @@ export function OverviewPage({ appointments, options, clinicName, locationName, 
         <div className="brief-actions">
           <Button appearance="primary" icon={<CalendarMonthRegular />} onClick={() => onPage('calendar')}>Open today’s calendar</Button>
           <Button appearance="secondary" icon={<AddRegular />} onClick={() => onPage('booking')}>Add appointment</Button>
+          <Button appearance="secondary" icon={<PhoneRegular />} disabled={calling} onClick={() => void callReceptionist()}>{calling ? 'Calling…' : 'Call me with AI receptionist'}</Button>
         </div>
+        {callStatus && <p role="status">{callStatus}</p>}
       </div>
       <div className="next-arrival" aria-label="Next confirmed appointment">
         <span><CalendarClockRegular /> Next confirmed</span>

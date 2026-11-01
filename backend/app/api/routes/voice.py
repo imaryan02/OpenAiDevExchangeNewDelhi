@@ -1,15 +1,20 @@
 import asyncio
 import hashlib
 import hmac
+import time
 from contextlib import suppress
 from typing import Any
 from urllib.parse import parse_qsl
 from xml.etree.ElementTree import Element, SubElement, tostring
 
+import httpx
 import structlog
-from fastapi import APIRouter, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Request, Response, WebSocket, WebSocketDisconnect
 
 from app.core.config import get_settings
+from app.core.errors import ApiError
+from app.personal_agent.config import get_personal_settings
+from app.security.auth import Principal, get_current_principal
 from app.voice.gateway import TwilioVoiceGateway, VoiceProtocolError
 from app.voice.presentation import presentation_scope
 from app.voice.security import (
@@ -21,6 +26,9 @@ from app.voice.voicelink_realtime_gateway import VoiceLinkRealtimeGateway
 
 router = APIRouter()
 logger = structlog.get_logger()
+_TEST_CALL_DESTINATION = "+918529586946"
+_test_call_lock = asyncio.Lock()
+_last_test_call_at: dict[str, float] = {}
 
 
 async def _signed_twilio_parameters(request: Request, path: str) -> dict[str, str] | None:
@@ -198,6 +206,77 @@ async def personal_twilio_media(websocket: WebSocket) -> None:
     except (VoiceProtocolError, WebSocketDisconnect, TimeoutError):
         with suppress(RuntimeError):
             await websocket.close(code=1008)
+
+
+@router.post("/twilio/test-call", status_code=202)
+async def start_receptionist_test_call(
+    principal: Principal = Depends(get_current_principal),
+) -> dict[str, str]:
+    """Temporary owner-only callback to the approved demo phone."""
+    settings, personal = get_settings(), get_personal_settings()
+    if not personal.enabled or personal.owner_id != principal.user_id:
+        raise ApiError(
+            "TEST_CALL_FORBIDDEN", "Only the configured demo owner can request this call.", 403
+        )
+    if not (
+        settings.twilio_voice_configured
+        and settings.database_url
+        and settings.verification_code_pepper
+        and settings.openai_api_key
+        and settings.openai_model
+        and settings.public_websocket_url
+        and settings.public_websocket_url.endswith("/v1/twilio/media")
+    ):
+        raise ApiError(
+            "TEST_CALL_NOT_CONFIGURED", "Twilio receptionist calling is not configured.", 503
+        )
+
+    owner = str(principal.user_id)
+    async with _test_call_lock:
+        now = time.monotonic()
+        if now - _last_test_call_at.get(owner, -float("inf")) < 60:
+            raise ApiError(
+                "TEST_CALL_RECENT", "A test call was requested recently. Wait one minute.", 429
+            )
+        base = str(settings.public_backend_url).rstrip("/")
+        account_sid = settings.twilio_account_sid or ""
+        try:
+            async with httpx.AsyncClient(
+                auth=(account_sid, settings.twilio_auth_token or ""), timeout=20
+            ) as client:
+                response = await client.post(
+                    f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Calls.json",
+                    data={
+                        "From": settings.twilio_phone_number or "",
+                        "To": _TEST_CALL_DESTINATION,
+                        "Url": f"{base}/v1/twilio/voice",
+                        "Method": "POST",
+                        "Timeout": "30",
+                        "TimeLimit": "600",
+                    },
+                )
+        except httpx.HTTPError as error:
+            logger.warning("twilio_test_call_request_failed", error_type=type(error).__name__)
+            raise ApiError("TEST_CALL_UNAVAILABLE", "Twilio could not be reached.", 502) from error
+        if response.status_code != 201:
+            logger.warning("twilio_test_call_rejected", status_code=response.status_code)
+            raise ApiError(
+                "TEST_CALL_REJECTED",
+                "Twilio did not accept the call. Check account and destination permissions.",
+                502,
+            )
+        try:
+            call_sid = response.json()["sid"]
+        except (ValueError, KeyError, TypeError) as error:
+            raise ApiError(
+                "TEST_CALL_UNCONFIRMED", "Twilio's call response was incomplete.", 502
+            ) from error
+        if not isinstance(call_sid, str) or not call_sid:
+            raise ApiError(
+                "TEST_CALL_UNCONFIRMED", "Twilio's call response was incomplete.", 502
+            )
+        _last_test_call_at[owner] = now
+        return {"status": "queued", "call_sid": call_sid}
 
 
 @router.post("/twilio/voice")
