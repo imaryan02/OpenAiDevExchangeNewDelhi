@@ -28,8 +28,13 @@ class FacilityView(BaseModel):
     connected_receiving_desk: bool
     emergency_open: bool
     ed_bays_ready: int
+    ed_bays_available: int
+    ed_holds_active: int
     icu_beds_ready: int
+    icu_beds_available: int
+    icu_holds_active: int
     ventilators_ready: int
+    pending_requests: int
     ct_available: bool
     trauma_available: bool
     pediatric_available: bool
@@ -61,6 +66,10 @@ def rank_facilities(
     results: list[FacilityView] = []
     for row in rows:
         reasons: list[str] = []
+        ed_holds = int(row.get("ed_holds_active") or 0)
+        icu_holds = int(row.get("icu_holds_active") or 0)
+        ed_available = max(0, int(row["ed_bays_ready"]) - ed_holds)
+        icu_available = max(0, int(row["icu_beds_ready"]) - icu_holds)
         verified_at = row["verified_at"]
         if verified_at.tzinfo is None:
             verified_at = verified_at.replace(tzinfo=UTC)
@@ -68,10 +77,10 @@ def rank_facilities(
             reasons.append("STATUS_NEEDS_RECONFIRMATION")
         if not row["emergency_open"]:
             reasons.append("EMERGENCY_SERVICE_NOT_OPEN")
-        if row["ed_bays_ready"] <= 0:
-            reasons.append("NO_READY_RECEIVING_SPACE")
-        if requirement == "ICU" and row["icu_beds_ready"] <= 0:
-            reasons.append("ICU_RESOURCE_NOT_READY")
+        if ed_available <= 0:
+            reasons.append("RECEIVING_SPACES_HELD" if ed_holds else "NO_READY_RECEIVING_SPACE")
+        if requirement == "ICU" and icu_available <= 0:
+            reasons.append("ICU_SPACES_HELD" if icu_holds else "ICU_RESOURCE_NOT_READY")
         if requirement == "TRAUMA" and not row["trauma_available"]:
             reasons.append("TRAUMA_CAPABILITY_NOT_LISTED")
         if requirement == "PEDIATRIC" and not row["pediatric_available"]:
@@ -92,8 +101,13 @@ def rank_facilities(
                 connected_receiving_desk=bool(row["receiving_enabled"]),
                 emergency_open=bool(row["emergency_open"]),
                 ed_bays_ready=int(row["ed_bays_ready"]),
+                ed_bays_available=ed_available,
+                ed_holds_active=ed_holds,
                 icu_beds_ready=int(row["icu_beds_ready"]),
+                icu_beds_available=icu_available,
+                icu_holds_active=icu_holds,
                 ventilators_ready=int(row["ventilators_ready"]),
+                pending_requests=int(row.get("pending_requests") or 0),
                 ct_available=bool(row["ct_available"]),
                 trauma_available=bool(row["trauma_available"]),
                 pediatric_available=bool(row["pediatric_available"]),

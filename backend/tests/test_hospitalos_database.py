@@ -78,9 +78,14 @@ async def scenario() -> None:
             replay = await create_request(first, session, settings)
         assert replay["id"] == created["id"]
 
+        second = CreateRequest(case_id=uuid4(), tracking_token="b" * 43,
+                               facility_slug="geeta-medicine", origin="CENTRAL_DELHI")
+        async with factory() as session:
+            second_created = await create_request(second, session, settings)
+
         async with factory() as session:
             inbox = await staff_inbox(ORG, session, Principal(ADMIN, None), settings)
-        assert len(inbox) == 1
+        assert len(inbox) == 2
         decision = Decision(organization_id=ORG, expected_version=created["version"],
                             decision_key=uuid4(), decision="ACCEPT",
                             arrival_note="Meet the demo receiving desk")
@@ -99,10 +104,18 @@ async def scenario() -> None:
                                             Principal(ADMIN, None), settings)
         assert replayed["id"] == accepted["id"]
 
-        second = CreateRequest(case_id=uuid4(), tracking_token="b" * 43,
-                               facility_slug="geeta-medicine", origin="CENTRAL_DELHI")
         async with factory() as session:
-            second_created = await create_request(second, session, settings)
+            listing_held = await public_facilities("CENTRAL_DELHI", "ANY", "GENERAL", session, settings)
+        geeta_held = next(item for item in listing_held["facilities"] if item["slug"] == "geeta-medicine")
+        assert geeta_held["ed_bays_ready"] == 1
+        assert geeta_held["ed_holds_active"] == 1
+        assert geeta_held["ed_bays_available"] == 0
+        assert "RECEIVING_SPACES_HELD" in geeta_held["reason_codes"]
+        async with factory() as session:
+            with pytest.raises(ApiError) as held_create:
+                await create_request(CreateRequest(case_id=uuid4(), tracking_token="h" * 43,
+                    facility_slug="geeta-medicine", origin="CENTRAL_DELHI"), session, settings)
+        assert held_create.value.status_code == 409
         async with factory() as session:
             conflict = await decide_request(
                 second_created["id"],

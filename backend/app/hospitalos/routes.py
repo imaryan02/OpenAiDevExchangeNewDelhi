@@ -46,12 +46,21 @@ async def public_facilities(
 ) -> dict[str, object]:
     require_demo(settings)
     result = await session.execute(
-        text("""select slug,name,area,address,latitude,longitude,cost_category,
+        text("""select f.slug,f.name,f.area,f.address,f.latitude,f.longitude,f.cost_category,
                        emergency_open,ed_bays_ready,icu_beds_ready,ventilators_ready,
                        ct_available,trauma_available,pediatric_available,
-                       obstetric_available,receiving_enabled,synthetic,verified_at
-                from public.hospitalos_facilities
-                where synthetic=true and slug in
+                       obstetric_available,receiving_enabled,synthetic,verified_at,
+                       (select count(*)::int from public.hospitalos_requests r
+                        where r.facility_id=f.id and r.status='PENDING'
+                          and r.deadline_at>now()) as pending_requests,
+                       (select coalesce(sum(h.ed_units),0)::int from public.hospitalos_holds h
+                        where h.facility_id=f.id and h.status='ACTIVE'
+                          and h.expires_at>now()) as ed_holds_active,
+                       (select coalesce(sum(h.icu_units),0)::int from public.hospitalos_holds h
+                        where h.facility_id=f.id and h.status='ACTIVE'
+                          and h.expires_at>now()) as icu_holds_active
+                from public.hospitalos_facilities f
+                where synthetic=true and f.slug in
                     ('geeta-medicine','north-demo-hospital','east-demo-medical-centre')
                 order by name""")
     )
@@ -79,12 +88,21 @@ async def staff_resources(
     require_demo(settings)
     await require_org_member(session, organization_id, principal.user_id)
     result = await session.execute(
-        text("""select id,slug,name,area,location_id,cost_category,emergency_open,
+        text("""select f.id,f.slug,f.name,f.area,f.location_id,f.cost_category,emergency_open,
                        ed_bays_ready,icu_beds_ready,ventilators_ready,ct_available,
                        trauma_available,pediatric_available,obstetric_available,
-                       receiving_enabled,synthetic,verified_at,version
-                from public.hospitalos_facilities
-                where organization_id=:org order by name"""),
+                       receiving_enabled,synthetic,verified_at,version,updated_by,
+                       (select count(*)::int from public.hospitalos_requests r
+                        where r.facility_id=f.id and r.status='PENDING'
+                          and r.deadline_at>now()) as pending_requests,
+                       (select coalesce(sum(h.ed_units),0)::int from public.hospitalos_holds h
+                        where h.facility_id=f.id and h.status='ACTIVE'
+                          and h.expires_at>now()) as ed_holds_active,
+                       (select coalesce(sum(h.icu_units),0)::int from public.hospitalos_holds h
+                        where h.facility_id=f.id and h.status='ACTIVE'
+                          and h.expires_at>now()) as icu_holds_active
+                from public.hospitalos_facilities f
+                where organization_id=:org order by f.name"""),
         {"org": organization_id},
     )
     return [dict(row) for row in result.mappings()]

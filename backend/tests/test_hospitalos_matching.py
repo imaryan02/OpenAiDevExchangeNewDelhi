@@ -37,6 +37,16 @@ def test_resource_requirement_changes_eligibility() -> None:
     assert rank(facility(icu_beds_ready=1), requirement="ICU")[0].recommended
 
 
+def test_active_holds_reduce_available_resources_and_eligibility() -> None:
+    held = rank(facility(ed_holds_active=2, icu_holds_active=1, pending_requests=1), requirement="ICU")[0]
+    assert held.ed_bays_ready == 2 and held.ed_bays_available == 0
+    assert held.icu_beds_ready == 1 and held.icu_beds_available == 0
+    assert held.pending_requests == 1
+    assert not held.recommended
+    assert "RECEIVING_SPACES_HELD" in held.reason_codes
+    assert "ICU_SPACES_HELD" in held.reason_codes
+
+
 def test_eligible_facility_precedes_nearer_unavailable_facility() -> None:
     near_unavailable = facility(slug="near", name="Near", ed_bays_ready=0)
     farther_ready = facility(slug="far", name="Far", latitude=28.68)

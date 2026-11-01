@@ -107,8 +107,16 @@ async def create_request(
             or facility["organization_id"] is None
         ):
             raise ApiError("RECEIVING_DESK_UNAVAILABLE", "Geeta demo desk is unavailable.", 409)
+        held = await session.execute(
+            text("""select coalesce(sum(ed_units),0)::int as ed_holds_active,
+                           coalesce(sum(icu_units),0)::int as icu_holds_active
+                    from public.hospitalos_holds
+                    where facility_id=:facility and status='ACTIVE' and expires_at>now()"""),
+            {"facility": facility["id"]},
+        )
         match = rank_facilities(
-            [dict(facility)], origin=payload.origin, preference=payload.preference,
+            [{**dict(facility), **dict(held.mappings().one())}],
+            origin=payload.origin, preference=payload.preference,
             requirement=payload.requirement,
         )[0]
         if not match.recommended:
