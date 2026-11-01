@@ -80,6 +80,7 @@ jobs:
               PERSONAL_AGENT_CALLBACK_PROVIDER=twilio \
               PERSONAL_AGENT_OUTBOUND_ENABLED=true \
               PERSONAL_AGENT_SCHEDULER_ENABLED=true \
+              HOSPITALOS_DEMO_ENABLED=true \
               TWILIO_PHONE_NUMBER=+18312286492 \
             --output none
       # Phone carriers cannot wait for a scale-from-zero cold start.
@@ -124,5 +125,16 @@ jobs:
               --type system --tail 20 --follow false --format json
             exit 1
           fi
+
+      - name: Verify HospitalOS demo facilities
+        run: |
+          fqdn=$(az containerapp show \
+            --name ai-receptionist-backend \
+            --resource-group rg-ai-receptionist \
+            --query properties.configuration.ingress.fqdn --output tsv)
+          curl --fail --show-error --silent \
+            --retry 3 --retry-all-errors --retry-delay 10 \
+            "https://${fqdn}/v1/hospitalos/facilities" \
+            | jq -e '.synthetic_demo == true and (.facilities | length) == 3'
 
 
